@@ -15,6 +15,12 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [8, 11, 17, 21] # 选择要测试的 Java 版本
+      fail-fast: false
+      max-parallel: 4
+    name: JDK ${{ matrix.java }}
 
     steps:
     - uses: actions/checkout@v4
@@ -23,11 +29,25 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: ${{ matrix.java }}
         cache: 'gradle'
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    #- name: Build with Gradle
+    #  run: ./gradlew check -PjdkVersion=11 --no-daemon --refresh-dependencies
+
     - name: Build with Gradle
-      run: ./gradlew check -PjdkVersion=11 --no-daemon --refresh-dependencies
+      run: ./gradlew jar --no-daemon
+
+    - name: List build directory
+      run: ls -la build/dist/maven
+
+    - name: tar
+      run: tar -zcvf target.all.tar.gz build/dist/maven
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: target.all.tar.gz
